@@ -18,6 +18,7 @@ import re#
 import warnings#
 warnings.filterwarnings("ignore", category=pd.errors.PerformanceWarning)
 warnings.filterwarnings("ignore", category=FutureWarning, message="`sparse` was renamed to `sparse_output`")
+warnings.filterwarnings("ignore", category=UserWarning, message=".*X has feature names, but StandardScaler was fitted without feature names.*")
 
 nlp = spacy.load("sl_core_news_trf")
 
@@ -114,7 +115,6 @@ def preprocess(df,output_name,):
         return combined_text
     
     def category_calculation(df):
-    # Load the DataFrame
     
         # Function to extract categories from the URL
         def extract_category(url):
@@ -195,8 +195,7 @@ def preprocess(df,output_name,):
     time_end = time.time()
     print("Time taken to compute embeddings:", time_end - time_start, "seconds")
     
-##TIME TO SIN COS
-        # Convert to datetime
+    # Convert to datetime
     df['date'] = pd.to_datetime(df['date'])
 
     # Convert to Unix timestamp
@@ -276,9 +275,9 @@ def preprocess(df,output_name,):
         )
 
     timestart = time.time()
-# Apply functions to count different types of entities
-# Process the text and save entities
-# Apply the NLP pipeline and process the text
+    # Apply functions to count different types of entities
+    # Process the text and save entities
+    # Apply the NLP pipeline and process the text
     df['doc'] = df['combined_text_lead_title'].apply(nlp)
     df[['entities', 'lemmatized_lead_title', 'ne_loc_cnt', 'ne_per_cnt', 'ne_org_cnt', 'ne_misc_cnt']] = df['doc'].apply(lambda doc: pd.Series(process_text(doc)))
 
@@ -358,7 +357,6 @@ def getPredictions(df,df_test,dictionary):
     #####################################
     #####################################
 
-    #df = pd.read_csv("X_train_sport.csv")
     df.drop(columns_to_drop, axis=1, inplace=True)
     X_train = df.drop('n_comments', axis=1).values
     y_train = df['n_comments'].values
@@ -462,7 +460,7 @@ def getPredictions(df,df_test,dictionary):
             loss = criterion(output, batch_y)
             loss.backward()
             optimizer.step()
-        # Validation loop
+    # Validation loop
     predictions = []
     model.eval()
     with torch.no_grad():
@@ -486,9 +484,6 @@ def getPredictions(df,df_test,dictionary):
 
 
 
-def read_json(data_path: str) -> list:
-    with gzip.open(data_path, 'rt', encoding='utf-8') as f:
-        return json.load(f)
 
 class RTVSlo:
 
@@ -523,7 +518,10 @@ class RTVSlo:
                 combined_predictions[idx] = prediction
         return np.array(combined_predictions)
     
-                    
+
+def read_json(data_path: str) -> list:
+    with gzip.open(data_path, 'rt', encoding='utf-8') as f:
+        return json.load(f)
     
 
 def main():
