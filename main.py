@@ -1,44 +1,30 @@
 import argparse
-import json
 import gzip
 import os
-import numpy as np
-
 import pandas as pd
-import numpy as np
-import spacy
-import ast
-from sklearn.preprocessing import MultiLabelBinarizer
-import pandas as pd
-import ast
-from sklearn.preprocessing import MultiLabelBinarizer
 from lemmagen3 import Lemmatizer
 import difflib
-import os
-
-
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
-import optuna
-from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
-import pandas as pd
-import time
 import random
 from sklearn.preprocessing import OneHotEncoder
 #dla, na gpu
 from transformers import AutoTokenizer, AutoModel
-import torch
 import pandas as pd
 import numpy as np
-from sklearn.metrics.pairwise import cosine_similarity
 import spacy
 import time
 import json
 import re
+import warnings
+warnings.filterwarnings("ignore", category=pd.errors.PerformanceWarning)
+warnings.filterwarnings("ignore", category=FutureWarning, message="`sparse` was renamed to `sparse_output`")
+
 nlp = spacy.load("sl_core_news_trf")
+
 
 
 
@@ -258,23 +244,23 @@ def preprocess(df,output_name,):
     df['half_yearly_sin'] = np.sin(2 * np.pi * df['unix_timestamp'] / seconds_in_half_year)
     df['half_yearly_cos'] = np.cos(2 * np.pi * df['unix_timestamp'] / seconds_in_half_year)
 
-##NUMBER OF FIGURES
+    ##NUMBER OF FIGURES
     df['figure_count'] = df['figures'].apply(len)
     
-##NUMBER OF PARAGRAPHS
+    ##NUMBER OF PARAGRAPHS
     df['paragraph_count'] = df['paragraphs'].apply(len)
 
     
-##ARTICLE LENGTH
+    ##ARTICLE LENGTH
     df['article_word_count'] = df['combined_text'].apply(lambda text: len(text.split()))
     
-##TITLE LENGTH
+    ##TITLE LENGTH
     df['title_word_count'] = df['title'].apply(lambda text: len(text.split()))
-#DOES TITLE CONTAIN ! OR ?  Create features indicating the presence of '?' and '!' in the title
+    #DOES TITLE CONTAIN ! OR ?  Create features indicating the presence of '?' and '!' in the title
     df['artquestion'] = df['title'].apply(lambda x: '?' in x)
     df['artexclaim'] = df['title'].apply(lambda x: '!' in x)
     
-#ARTICLES IN ONE HOUR    
+    #ARTICLES IN ONE HOUR    
 
     try:
         # Try to open the file and load the list
@@ -302,12 +288,6 @@ def preprocess(df,output_name,):
     df[['entities', 'lemmatized_lead_title', 'ne_loc_cnt', 'ne_per_cnt', 'ne_org_cnt', 'ne_misc_cnt']] = df['doc'].apply(lambda doc: pd.Series(process_text(doc)))
 
 
-    """     df['doc'] = df['combined_text_lead_title'].apply(nlp)
-    df['entities'] = df['doc'].apply(lambda doc: list({(ent.text, ent.label_) for ent in doc.ents}))
-    df['ne_loc_cnt'] = df['entities'].apply(count_location_entities_from_list)
-    df['ne_per_cnt'] = df['entities'].apply(count_person_entities_from_list)
-    df['ne_org_cnt'] = df['entities'].apply(count_org_entities_from_list)  """
-
     timeend = time.time()
     print("Time taken to count entities-Spacy bert task:", timeend - timestart, "seconds")
 
@@ -324,7 +304,8 @@ def preprocess(df,output_name,):
 
 
 
-
+##################################################
+##################################################
 
 
 
@@ -392,16 +373,16 @@ def getPredictions(df,df_test,dictionary):
     y_train=np.sqrt(y_train)
 
     df_test.drop(columns_to_drop, axis=1, inplace=True)
-    X_test = df_test.drop('n_comments', axis=1).values
-    y_test = df_test['n_comments'].values
+    X_test=df_test
+ 
 
     # Standard scaling of features
     scaler = StandardScaler()
     X_train = scaler.fit_transform(X_train)
     X_test = scaler.transform(X_test)
 
-    X_val=X_test
-    y_val=y_test
+    X_val=X_test    
+    y_val=np.zeros(len(X_val))
 
 
     # Converting data to PyTorch tensors
@@ -463,7 +444,7 @@ def getPredictions(df,df_test,dictionary):
     g = torch.Generator()
     g.manual_seed(INITIAL_SEED)
     train_loader = DataLoader(TensorDataset(X_train, y_train), batch_size=batch_size, shuffle=False)
-    val_loader = DataLoader(TensorDataset(X_val, y_val), batch_size=batch_size, shuffle=False)
+    val_loader = DataLoader(TensorDataset(X_val,y_val), batch_size=batch_size, shuffle=False)
 
 
     # Moving model to GPU if available
@@ -492,19 +473,13 @@ def getPredictions(df,df_test,dictionary):
         # Validation loop
     predictions = []
     model.eval()
-    val_mae = 0
     with torch.no_grad():
-        for batch_x, batch_y in val_loader:
+        for batch_x,batch_y in val_loader:
             if torch.cuda.is_available():
                 batch_x, batch_y = batch_x.cuda(), batch_y.cuda()
             output = model(batch_x)
             output=output**2
             predictions.extend(output.cpu().numpy().flatten())
-            #set negative predictions to 0
-            output[output<0]=0
-            val_mae += criterion(output, batch_y).item()
-    val_mae /= len(val_loader)
-    print(f"Validation MAE: {val_mae}")
 
     return predictions
 
@@ -532,35 +507,30 @@ class RTVSlo:
         pass        
         
     def predict(self, test_data: list) -> np.array:
-        df=read_csv_with_embeddings("SAVEtrain_df.csv")
+        df=read_csv_with_embeddings("train_df.csv")
         df=unpack_embeddings(df)
-        df_test=read_csv_with_embeddings("SAVEtest_df.csv")
+        df_test=read_csv_with_embeddings("test_df.csv")
         df_test=unpack_embeddings(df_test)
         topics=['sport','svet','kultura','zabava-in-slog','slovenija','gospodarstvo','crna-kronika','okolje','znanost-in-tehnologija','stevilke']
         combined_predictions = [None] * len(df_test)    
         for topic in topics:
         # Select only rows with the current topic in df and df_test
-        df_topic = df[df['topics'] == topic]
-        df_test_topic = df_test[df_test['topics'] == topic]
-        
-        # Remember the indices of the selected rows in df_test
-        indices = df_test[df_test['topics'] == topic].index.tolist()
-        
-        # Select the corresponding dictionary from data
-        dictionary = next(item for item in data if item['category'] == topic)
-        print(dictionary)
-        # Call getPredictions
-        pred = getPredictions(df_topic, df_test_topic, dictionary)
-        print(pred)
-            # Recombine predictions using indices
-        for idx, prediction in zip(indices, pred):
-            combined_predictions[idx] = prediction
-
-    # Print the combined predictions for the whole test set
-    with open("predictions.txt", "w") as file:
-        for prediction in combined_predictions:
-            file.write(f"{prediction}\n")   
-                
+            df_topic = df[df['topics'] == topic]
+            df_test_topic = df_test[df_test['topics'] == topic]
+            
+            # Remember the indices of the selected rows in df_test
+            indices = df_test[df_test['topics'] == topic].index.tolist()
+            
+            # Select the corresponding dictionary from data
+            dictionary = next(item for item in data if item['category'] == topic)
+            # Call getPredictions
+            pred = getPredictions(df_topic, df_test_topic, dictionary)
+                # Recombine predictions using indices
+            for idx, prediction in zip(indices, pred):
+                combined_predictions[idx] = prediction
+        return np.array(combined_predictions)
+    
+                    
     
 
 def main():
@@ -572,24 +542,28 @@ def main():
     #if there is train?df.csv and test_df.csv
 
     if os.path.exists("train_df.csv") and os.path.exists("test_df.csv"):
+        print("SKIPPING EMEDDINGS CALCULATION")
         pass
     else:
-        train_data = read_json(args.train_data_path)
-        test_data = read_json(args.test_data_path)
-        
+        print("GET READY TO SET YOUR COMPUTER ON FIRE")
+
         train_df=pd.read_json(args.train_data_path)
         test_df=pd.read_json(args.test_data_path)
         preprocess(train_df,"train_df.csv")
         preprocess(test_df,"test_df.csv")
 
+    train_data=[]
+    test_data=[]
     rtv = RTVSlo()
     rtv.fit(train_data)
     predictions = rtv.predict(test_data)
 
     if os.path.exists('predictions.txt'):
         os.remove('predictions.txt')
+    print("SAVING PREDICTIONS TO predictions.txt")
 
-    np.savetxt('predictions.txt', predictions)
+    np.savetxt('predictions.txt', predictions, fmt='%.6f')
+    print("SEE YOU LATER ALLIGATOR!")
 
 if __name__ == '__main__':
     main()
