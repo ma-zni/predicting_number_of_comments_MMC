@@ -1,25 +1,21 @@
-import argparse
-import gzip
-import os
-import pandas as pd
-from lemmagen3 import Lemmatizer
-import difflib
+import argparse#
+import gzip#
+import os#
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
 from sklearn.preprocessing import StandardScaler
-import random
+import random#
 from sklearn.preprocessing import OneHotEncoder
-#dla, na gpu
 from transformers import AutoTokenizer, AutoModel
 import pandas as pd
 import numpy as np
 import spacy
-import time
-import json
-import re
-import warnings
+import time#
+import json#
+import re#
+import warnings#
 warnings.filterwarnings("ignore", category=pd.errors.PerformanceWarning)
 warnings.filterwarnings("ignore", category=FutureWarning, message="`sparse` was renamed to `sparse_output`")
 
@@ -50,7 +46,6 @@ data =  [ {"category": "sport", "occurrences": 170, "mae": 40.718130111694336, "
 ##################################################
 ##################################################
 #PREPROCESS DATASET - USES GPU
-#dla, na gpu
 
 # Function to process text and extract entities, lemmatized text, and count entities
 def process_text(doc):
@@ -336,8 +331,6 @@ columns_to_drop = ['url', 'authors', 'date', 'title', 'paragraphs', 'figures', '
 
 globalBestMae=100000.0
 def getPredictions(df,df_test,dictionary):
-    # Load the DataFrame
-
     
     ##################################################
     ##################################################  
@@ -374,7 +367,6 @@ def getPredictions(df,df_test,dictionary):
 
     df_test.drop(columns_to_drop, axis=1, inplace=True)
     X_test=df_test
- 
 
     # Standard scaling of features
     scaler = StandardScaler()
@@ -511,6 +503,7 @@ class RTVSlo:
         df=unpack_embeddings(df)
         df_test=read_csv_with_embeddings("test_df.csv")
         df_test=unpack_embeddings(df_test)
+        
         topics=['sport','svet','kultura','zabava-in-slog','slovenija','gospodarstvo','crna-kronika','okolje','znanost-in-tehnologija','stevilke']
         combined_predictions = [None] * len(df_test)    
         for topic in topics:
@@ -540,7 +533,7 @@ def main():
     args = parser.parse_args()
 
     #if there is train?df.csv and test_df.csv
-
+    print("HELLO!")
     if os.path.exists("train_df.csv") and os.path.exists("test_df.csv"):
         print("SKIPPING EMEDDINGS CALCULATION")
         pass
