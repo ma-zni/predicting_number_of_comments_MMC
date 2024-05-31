@@ -1,0 +1,19 @@
+rtvslo_test.json
+rtvslo_test.json.gz
+rtvslo_train.json
+rtvslo_train.json.gz
+test_df.csv
+testaa_df.csv
+train_df.csv
+#ignore any csv file
+*.csv
+#ifgnore any txt file
+*.txt
+*gzip
+*gz
+*json
+*json.gz
+*csv
+*csv.gz
+*txt
+*pth
